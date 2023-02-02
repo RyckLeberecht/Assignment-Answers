@@ -59,9 +59,9 @@ class BLASTforOrthologues
     # @param [Integer] evalue_threshold a Integer to evaluate e
     # @return [String] top_hit a String with the name of the top hit
     # @note Both the bit treshold and e-value treshold are based on (Pearson, 2013; https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3820096/)
-    # @note This paper claims, that a bit treshold of 50 almost garantees the significance of hits.
+    # @note This paper claims, that a bit treshold of 50 almost garantees the significance of hits. While the bit_treshold is based on the evalue, the paper also claims that a good cutoff is at e < 1e-10
     # @note It also states that a smaller database usually needs a lower bit_treshold to make hits more likely.
-    def self.find_tophit(query,factory, bit_treshold = 50, evalue_threshold = 1e-10)
+    def self.find_tophit(query,factory, bit_treshold = 0, evalue_threshold = 0)
         # Do the homology search 
         report = factory.query(query)
         # Filter for the top hit
@@ -91,13 +91,16 @@ class BLASTforOrthologues
         factory_2 = Bio::Blast.local('blastx', "#{path_1}")
         
         k = 0 # used to break the loop earlier
+        key = 0 # identifiers for orthologue pairs
         Bio::FlatFile.auto(sequenze_1).each_entry do |query|
           # Extract the name of the tested gene
           entry_id_stripped = query.entry_id.strip
           gene_name_1 = entry_id_stripped.split("|")[0]
           # Find the best homologue
           top_hit = BLASTforOrthologues.find_tophit(query, factory_1)
-          
+          #puts gene_name_1
+          #puts query
+          #puts top_hit
           if top_hit && !top_hit.empty?
             Bio::FlatFile.auto(sequenze_2).each_entry do |query_2|
               # Extract the gene name to check if it is identical to the top_hit
@@ -106,19 +109,23 @@ class BLASTforOrthologues
               if gene_name_2 == top_hit
                 # Find the best homologue
                 hit_back = BLASTforOrthologues.find_tophit(query_2, factory_2)
+                hit_back = hit_back.split("|")[0]
+                #puts hit_back
                 if hit_back == gene_name_1
                   # Save the orthologue genes
-                  orthologues[key.to_sym] = gene_name_1 + top_hit
+                  key += 1
+                  puts "Found orthologue: #{gene_name_1} + #{top_hit}"
+                  orthologues[key.to_s] = [gene_name_1, top_hit]
                 end
               end
             end
           end
           k += 1
-          if k > 100 # break the loop after a specific amount of runs 
+          if k > 5 # break the loop after a specific amount of runs 
             # Write the orthologues to a txt file
             File.open("orthologues.txt", "w") do |file|
               orthologues.each do |key, value|
-                file.write "#{key}: #{value}"
+                file.write "Orthologue pair number #{key}: #{value}\n"
               end
             end
             break

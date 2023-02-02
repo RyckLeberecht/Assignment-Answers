@@ -1,0 +1,2 @@
+Orthologue pair number 1: ["SPAC212.08c", "AT1G26798.1"]
+Orthologue pair number 2: ["SPAC212.04c", "AT3G27027.1"]
